@@ -10,3 +10,6 @@ typedef struct{
     void (*render)(SDL_Renderer*,float);
 
 }Entity;
+
+extern Entity entities[MAX_ENTITIES];
+extern int entities_count;

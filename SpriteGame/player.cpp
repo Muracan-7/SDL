@@ -1,16 +1,19 @@
-#include "player.h"
-#include <SDL3_ttf/SDL_ttf.h>
 #include <ostream>
+#include "draw_text.h"
+#include <math.h>
+
+
 #define TEXT_SIZE 80
 #define TEXT_COLOR (SDL_Color){255,255,255,255}
-#include <math.h>
+
 static SDL_Texture* player_tex;
-TTF_Font* font;
-SDL_Texture* font_tex;
-SDL_Surface* fps_surf;
 
 SDL_Surface* pos_surf;
 SDL_Texture* pos_tex;
+
+SDL_Texture* fps_tex;
+SDL_Surface* fps_surf;
+TTF_Font* font;
 
 int mseconds;
 int seconds;
@@ -18,8 +21,11 @@ int frames{0};
 int fps{0};
 std::string fps_text;
 static int last_fps_time = 0;
+
 std::string pos_text;
 std::string pos_text_y;
+
+
 typedef struct 
 {
     float x,y;
@@ -28,15 +34,10 @@ typedef struct
 Position position = {0,0};
 
 
-static void texter(SDL_Renderer* renderer,float posx,float posy)
-{
-       SDL_FRect font_rect{posx,posy,140,32};
-       SDL_RenderTexture(renderer,font_tex,NULL,&font_rect);
-}
-
 static void quit()
 {
     TTF_CloseFont(font);
+    TTF_Quit();
 }
 static void handle_events(SDL_Event* e)
 {
@@ -65,6 +66,7 @@ static void update(float delta_time)
 }
 static void render(SDL_Renderer* renderer,float delta_time)
 {
+
    int current_time = SDL_GetTicks();
     if (current_time - last_fps_time >= 1000)
     {
@@ -76,17 +78,15 @@ static void render(SDL_Renderer* renderer,float delta_time)
    
      fps_text = std::to_string(fps);
      fps_text.append(":FPS");
-     fps_surf= TTF_RenderText_Blended(font,fps_text.c_str(),0,TEXT_COLOR);
+     
 
-
-    font_tex= SDL_CreateTextureFromSurface(renderer,fps_surf);
-    SDL_SetTextureScaleMode(font_tex,SDL_SCALEMODE_LINEAR);
-    texter(renderer,0,0);
-
+     texter(renderer,0,0,120,40,fps_tex,fps_text,TEXT_COLOR,font);
+    
 
      SDL_DestroySurface(fps_surf);
-     SDL_DestroyTexture(font_tex);
+     SDL_DestroyTexture(fps_tex);
      fps_surf=NULL;
+
 
 
      pos_text = std::to_string((int)round(position.x));
@@ -96,9 +96,8 @@ static void render(SDL_Renderer* renderer,float delta_time)
      pos_text.append(":y ");
      pos_surf =TTF_RenderText_Blended(font,pos_text.c_str(),0,TEXT_COLOR);
      pos_tex = SDL_CreateTextureFromSurface(renderer,pos_surf);
-     texter(renderer,position.x,position.y-40);
      
-     
+     texter(renderer,position.x,position.y+40,140,40,pos_tex,pos_text,TEXT_COLOR,font);
 
      SDL_DestroySurface(pos_surf);
      SDL_DestroyTexture(pos_tex);
@@ -109,21 +108,21 @@ static void render(SDL_Renderer* renderer,float delta_time)
 
      SDL_FRect player_pos{position.x,position.y,64,64};
 
-    if(position.x>840)
+    if(position.x>WINDOW_WIDTH)
     {
-        position.x=static_cast<int>(position.x)%840;
+        position.x=static_cast<int>(position.x)%WINDOW_WIDTH;
     }
       if(position.x<0)
     {
-        position.x=840;
+        position.x=WINDOW_WIDTH;
     }
-     if(position.y>320)
+     if(position.y>WINDOW_HEIGHT)
     {
-        position.y=static_cast<int>(position.y)%320;
+        position.y=static_cast<int>(position.y)%WINDOW_HEIGHT;
     }
      if(position.y<0)
     {
-        position.y=320;
+        position.y=WINDOW_HEIGHT;
     }
     SDL_SetTextureScaleMode(player_tex,SDL_SCALEMODE_NEAREST);
     SDL_RenderTexture(renderer,player_tex,NULL,&player_pos);
@@ -135,8 +134,9 @@ Entity init_player(SDL_Renderer* renderer)
 {
     TTF_Init();
     font=TTF_OpenFont("./font.ttf",TEXT_SIZE);
-   
+    SDL_SetTextureScaleMode(fps_tex,SDL_SCALEMODE_LINEAR);
     player_tex=IMG_LoadTexture(renderer,"./dude.bmp");
     Entity player={.quit=quit,.handle_events=handle_events,.update=update,.render=render};
     return player;
+
 }
