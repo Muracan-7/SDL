@@ -1,6 +1,7 @@
 #include "init.h"
 #include "../entity.h"
 #include "../player.h"
+#include "../map.h"
 SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv)
  {  
     AppState* state = static_cast<AppState*>(SDL_malloc(sizeof(AppState)));
@@ -36,8 +37,8 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char **argv)
     state->last_counter = SDL_GetPerformanceCounter();
     state->frequency = SDL_GetPerformanceFrequency();
 
-     
 
+    entities[entities_count++]=  init_map(state->renderer);
     entities[entities_count++]=  init_player(state->renderer);
     return SDL_APP_CONTINUE;
  }

@@ -3,7 +3,6 @@
 #define MAX_ENTITIES 100
 
 typedef struct{
-    void (*texter)(SDL_Renderer*);
     void (*quit)(void);
     void (*handle_events)(SDL_Event*);
     void (*update)(float);

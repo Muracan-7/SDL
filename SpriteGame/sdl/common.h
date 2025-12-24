@@ -5,8 +5,8 @@
 #include <iostream>
 #include <SDL3_ttf/SDL_ttf.h>
 
-#define WINDOW_WIDTH 960
-#define WINDOW_HEIGHT 640
+#define WINDOW_WIDTH 1920
+#define WINDOW_HEIGHT 1080
 
 
 
@@ -34,6 +34,5 @@ typedef struct AppState{
     TTF_TextEngine* text_engine;
     uint64_t last_counter;
     uint64_t frequency;
-
 }AppState;
 

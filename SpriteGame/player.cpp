@@ -11,11 +11,10 @@
 #define BACKGROUND_TEXT_COLOR (SDL_Color){140,140,255,55}
 #define ANIMATION_FPS 12.0f
 #define ANIMATION_FRAME_DURATION (1.0f / ANIMATION_FPS)
-
+#define PLAYER_SPEED 140
 
 
 static SDL_Texture* player_tex;
-
 
 TTF_Font* font_large;
 TTF_Font* font_medium;
@@ -27,8 +26,14 @@ SDL_FRect player_pos;
 int frames{0};
 int fps{0};
 std::string fps_string;
+
+Uint64 last_input_time = 0;
 static int last_fps_time = 0;
 static float time_accumulator = 0.0f;
+
+
+SDL_Scancode last_key_pressed{SDL_SCANCODE_UNKNOWN};
+SDL_Scancode current_key_pressed{SDL_SCANCODE_UNKNOWN};
 
 typedef struct 
 {
@@ -46,7 +51,6 @@ SDL_FRect player_src;
         player_src.y=y;
         player_src.h=h;
         player_src.w=w;
-
     }
 };
 
@@ -84,12 +88,15 @@ struct Animation
         }
     }
 };
+
 Animation mAnimation;
 Animation walkDown;
 Animation walkUp;
 Animation walkLeft;
 Animation walkRight;
 Animation attackRight;
+Animation idleDown;
+
 static void quit()
 {
     TTF_CloseFont(font_large);
@@ -103,84 +110,74 @@ static void quit()
 
 static void handle_events(SDL_Event* e)
 {
+    if(SDL_PollEvent(e))
+    {
+        switch (e->type)
+        {
+        case SDL_EVENT_KEY_DOWN:
+            last_key_pressed == current_key_pressed;
+            current_key_pressed = e->key.scancode;
+            break;
+        
+        default:
+            break;
+        }
+        
 
+    }
 }
+
+void animate(Animation anim,float time_accumulator)
+{
+    while (time_accumulator >= ANIMATION_FRAME_DURATION)
+    {
+        anim.playAnimation();
+        time_accumulator -= ANIMATION_FRAME_DURATION;
+    }
+       player_Src= anim.GetFrameAsSDL_FRect();
+    
+}
+
+
 
 static void update(float delta_time)
 {   
-    const bool *keyboard_state = SDL_GetKeyboardState(NULL);
-    float x, y;
-    Uint32 mouse_state = SDL_GetMouseState(&x, &y);
-
+    const bool* keyboard_state = SDL_GetKeyboardState(NULL);
+    bool idle=false;
     time_accumulator += delta_time;
-
-
-    SDL_Event e;
-
-   if(keyboard_state[SDL_SCANCODE_W])
-   {
-    position.y-=120*delta_time;
-     while (time_accumulator >= ANIMATION_FRAME_DURATION)
-    {
-        walkUp.playAnimation();
-        time_accumulator -= ANIMATION_FRAME_DURATION;
+  
+    
+    if(keyboard_state[SDL_SCANCODE_W])
+    { 
+    position.y-=PLAYER_SPEED*delta_time;
+    animate(walkUp,time_accumulator);
     }
-    player_Src=walkUp.GetFrameAsSDL_FRect();
-   }
-
+   
    if(keyboard_state[SDL_SCANCODE_S])
    {
-    position.y+=120*delta_time;
-    while (time_accumulator >= ANIMATION_FRAME_DURATION)
-    {
-        walkDown.playAnimation();
-        time_accumulator -= ANIMATION_FRAME_DURATION;
-    }
-       player_Src= walkDown.GetFrameAsSDL_FRect();
-
+    position.y+=PLAYER_SPEED*delta_time;
+    animate(walkDown,time_accumulator);
    }
+
      if(keyboard_state[SDL_SCANCODE_A])
    {
-    position.x-=120*delta_time;
-       while (time_accumulator >= ANIMATION_FRAME_DURATION)
-    {
-        walkLeft.playAnimation();
-        time_accumulator -= ANIMATION_FRAME_DURATION;
-    }
-       player_Src= walkLeft.GetFrameAsSDL_FRect();
+    position.x-=PLAYER_SPEED*delta_time;
+    animate(walkLeft,time_accumulator);
    }
      if(keyboard_state[SDL_SCANCODE_D])
    {
-    position.x+=120*delta_time;
-        while (time_accumulator >= ANIMATION_FRAME_DURATION)
-    {
-        walkRight.playAnimation();
-        time_accumulator -= ANIMATION_FRAME_DURATION;
-    }
-       player_Src= walkRight.GetFrameAsSDL_FRect();
+    position.x+=PLAYER_SPEED*delta_time;
+    animate(walkRight,time_accumulator);
    }
-   
-    if(keyboard_state[SDL_SCANCODE_SPACE])
-    {
-         while (time_accumulator >= ANIMATION_FRAME_DURATION)
-          {
-              attackRight.playAnimation();
-              time_accumulator -= ANIMATION_FRAME_DURATION;
-          }
-             player_Src= attackRight.GetFrameAsSDL_FRect();
+
     }
-            
-
-}
-
-
+  
 
 
 
 
 static void render(SDL_Renderer* renderer,float delta_time,TTF_TextEngine* text_engine)
 {
-    SDL_RenderClear(renderer);
      int current_time = SDL_GetTicks();
     if (current_time - last_fps_time >= 1000)
     {
@@ -188,8 +185,8 @@ static void render(SDL_Renderer* renderer,float delta_time,TTF_TextEngine* text_
         frames = 0;
         last_fps_time = current_time; 
     }
-    fps_string =std::to_string(fps);
-    fps_string.append(" :FPS");
+   fps_string =std::to_string(fps);
+   fps_string.append(" :FPS");
 
     TTF_Text* dude_text=TTF_CreateText(text_engine,font_medium,"Lil Nga",0);
     TTF_DrawRendererText(dude_text,position.x,position.y-20);
@@ -225,20 +222,22 @@ static void render(SDL_Renderer* renderer,float delta_time,TTF_TextEngine* text_
     }
     SDL_RenderTexture(renderer,player_tex,&player_Src,&player_pos);
     frames++;
-    SDL_RenderPresent(renderer); 
 }
 
 Entity init_player(SDL_Renderer* renderer)
 {
+    
     font_large=TTF_OpenFont("assets/fonts/font.ttf",FONT_SIZE);
     font_medium=TTF_OpenFont("assets/fonts/font.ttf",FONT_SIZE-6);
     font_small=TTF_OpenFont("assets/fonts/font.ttf",FONT_SIZE-10);
-    
+
     walkDown.LoadFrames(16,16,16,16,6);
     walkLeft.LoadFrames(16,32,16,16,6);
     walkRight.LoadFrames(16,48,16,16,6);
     walkUp.LoadFrames(16,64,16,16,6);
-    attackRight.LoadFrames(18,328,16,16,6);
+    attackRight.LoadFrames(18,329,22,20,6);
+    idleDown.LoadFrames(130,16,16,16,6);
+
     player_tex=IMG_LoadTexture(renderer,"assets/Char_Sprites/char_spritesheet.png");
     SDL_SetTextureScaleMode(player_tex,SDL_SCALEMODE_NEAREST);
     Entity player={.quit=quit,.handle_events=handle_events,.update=update,.render=render};
